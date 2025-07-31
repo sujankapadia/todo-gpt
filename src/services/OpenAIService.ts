@@ -100,7 +100,7 @@ Other examples:
 
     try {
       const response = await this.client.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4.1',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: input }
@@ -176,15 +176,20 @@ Current Context:
 Current Todos in "${context.currentList?.name || 'No List'}":
 ${this.formatTodosForContext(context)}${historyContext}
 
-IMPORTANT: You have full access to the user's current todos shown above. Use this data to answer questions directly.
+SIMPLE DECISION RULE: Does the user's message indicate ANY change to todo status or data?
 
-Response Types:
-1. **Structured JSON** (for modifying todo list): Return JSON to execute the action
-2. **Data Analysis** (for questions about existing todos): Answer directly using provided context
-3. **Advice/Strategy** (for recommendations): Provide helpful guidance based on context
+**YES → Return JSON command to execute the change**
+This includes:
+- Explicit commands: "complete task 1", "mark as high priority", "add new task"
+- Implicit statements: "I bought X", "finished Y", "already did Z", "got the groceries"
+- Reference-based: "mark those done", "complete what we discussed"
+- Status updates: "I've done the report", "actually completed that yesterday"
 
-CRITICAL: For questions about existing todos, analyze the provided data directly and give specific answers. 
-Do NOT tell users to "search" or "look for" - YOU have the data and should analyze it immediately.
+**NO → Return conversational response**
+This includes:
+- Information requests: "which todos mention X?", "what's due today?"
+- Analysis questions: "how many tasks left?", "show me completed items"
+- Strategy questions: "what should I focus on?", "how to organize?"
 
 Available JSON Actions:
 - "add_todo": Add a single todo
@@ -218,35 +223,28 @@ Command Types:
 - complete_todo: {"action": "complete_todo", "todoNumber": number}
 - edit_todo: {"action": "edit_todo", "todoNumber": number, "title": "string", "priority": "high|medium|low", "dueDate": "YYYY-MM-DD"}
 
-**JSON Command Examples (use structured JSON):**
+**EXAMPLES:**
+
+**Change Requests (→ JSON Command):**
 - "Add buy groceries" → {"action": "add_todo", "title": "buy groceries"}
 - "Complete task 1" → {"action": "complete_todo", "todoNumber": 1}
-- "Move high priority items to new Urgent list" → {"action": "command_sequence", "commands": [...]}
+- "I've bought Riya a new lunch bag, actually" → {"action": "complete_todo", "todoNumber": 1}
+- "Mark those as high priority" → {"action": "command_sequence", "commands": [...]}
+- "I finished the report yesterday" → {"action": "complete_todo", "todoNumber": X}
 
-**Data Analysis Examples (answer directly using provided context):**
+**Information Requests (→ Conversational Response):**
 - "Which todos mention Riya?" → "2 todos mention Riya: 'buy Riya a new lunch bag' and 'Register Riya for belt test'"
-- "What's due today?" → "3 tasks are due today: [list specific tasks with titles]"
-- "How many high priority tasks do I have?" → "You have 2 high priority tasks: [list specific titles]"
-- "What have I completed?" → "You've completed 1 task: 'order items on Amazon'"
-- "Which tasks are overdue?" → "Based on today's date, [specific analysis of due dates]"
-- "Show me work-related todos" → "I found 3 work-related tasks: [list specific matches]"
+- "What's due today?" → "3 tasks are due today: [list specific tasks]"
+- "How many tasks left?" → "You have 4 incomplete tasks: [list them]"
+- "What should I focus on?" → "Based on priorities and due dates, I recommend..."
 
-**Strategy/Advice Examples (provide recommendations):**
-- "What should I focus on today?" → Analyze current todos, priorities, and due dates to suggest specific focus
-- "How should I organize my week?" → Provide organizational strategy based on current workload
+**CRITICAL INSTRUCTIONS:**
+1. Use conversation history to resolve references ("those", "them", "it")
+2. Apply the simple decision rule: Change request = JSON, Information request = Conversational
+3. For implicit completions like "I bought X", find the matching todo and mark it complete
+4. NEVER return JSON as text in conversational responses - execute it or don't mention it
 
-**Key Decision Rules:**
-1. **Modification requests** (add, complete, delete, edit, create) → Return JSON commands
-2. **Analysis questions** (which, what, how many, show me) → Answer directly using provided todo context
-3. **Strategy questions** (what should I focus on, how to organize) → Provide advice based on context
-
-**Context Usage Guidelines:**
-- Always reference specific todo titles, due dates, and priorities from the provided context
-- Count and enumerate todos precisely when asked for quantities
-- When filtering (e.g., "work-related", "high priority"), scan all todos and list matches
-- Compare due dates against today's date (${new Date().toISOString().split('T')[0]}) for overdue analysis
-
-CRITICAL: You have the complete todo list above - use it to answer questions immediately and specifically.`;
+Use both todo data and conversation history for accurate responses.`;
   }
 
   async chatWithAI(message: string, context: any, conversationHistory: string[] = []): Promise<any> {
@@ -258,7 +256,7 @@ CRITICAL: You have the complete todo list above - use it to answer questions imm
 
     try {
       const response = await this.client.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4.1',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }

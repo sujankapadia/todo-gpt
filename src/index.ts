@@ -167,6 +167,12 @@ function startInteractiveMode() {
       
       const response = await openAIService.chatWithAI(message, context, conversationHistory);
       
+      // DEBUG: Show request type detection and raw response
+      console.log('🔍 DEBUG INFO:');
+      console.log(`   Request Type Detected: ${response.action || response.type || 'unknown'}`);
+      console.log(`   Raw LLM Response: ${JSON.stringify(response, null, 2)}`);
+      console.log('');
+      
       // Add to conversation history
       conversationHistory.push(`User: ${message}`);
       
