@@ -141,4 +141,208 @@ Option 2: Environment variable
 
 Without an API key, you can still use slash commands like /add, /list, etc.`;
   }
+
+  private formatTodosForContext(context: any): string {
+    if (!context.currentList || !context.currentList.todos || context.currentList.todos.length === 0) {
+      return '- No todos in current list';
+    }
+
+    const todos = context.currentList.todos.slice(0, 20); // Limit for context size
+    return todos.map((todo: any, index: number) => {
+      const status = todo.completed ? '✓' : ' ';
+      const priority = todo.priority ? ` [${todo.priority}]` : '';
+      const dueDate = todo.dueDate ? ` (due: ${new Date(todo.dueDate).toISOString().split('T')[0]})` : '';
+      const categories = todo.categories && todo.categories.length > 0 ? ` {${todo.categories.join(', ')}}` : '';
+      return `  ${index + 1}. [${status}] ${todo.title}${priority}${dueDate}${categories}`;
+    }).join('\n');
+  }
+
+  getChatSystemPrompt(context: any, conversationHistory: string[] = []): string {
+    if (!this.isConfigured()) {
+      return 'AI is not configured. Set OPENAI_API_KEY to use chat mode.';
+    }
+
+    const historyContext = conversationHistory.length > 0 
+      ? `\n\nRecent Conversation:\n${conversationHistory.slice(-3).join('\n')}\n`
+      : '';
+
+    return `You are a helpful AI assistant for a todo list application. Help users manage tasks, provide insights, and suggest command sequences for complex operations.
+
+Current Context:
+- Current list: ${context.currentList?.name || 'None'}
+- Available lists: ${context.availableLists?.map((l: any) => `${l.name} (${l.todos.length} items)`).join(', ') || 'None'}
+- Today's date: ${new Date().toISOString().split('T')[0]}
+
+Current Todos in "${context.currentList?.name || 'No List'}":
+${this.formatTodosForContext(context)}${historyContext}
+
+IMPORTANT: When users request actions that modify the todo list (adding, completing, deleting, editing tasks, creating lists, etc.), you MUST respond with structured JSON commands to actually execute those actions. Only use conversational responses for questions, advice, or explanations.
+
+Response Types:
+1. **Structured JSON** (for ANY actionable request): Return JSON to execute the action
+2. **Conversational text** (for questions/advice only): Return plain text response
+
+Available JSON Actions:
+- "add_todo": Add a single todo
+- "add_multiple_todos": Add multiple todos
+- "complete_todo": Mark todo completed  
+- "create_list": Create new list
+- "switch_list": Switch to different list
+- "delete_todo": Delete a todo
+- "command_sequence": Execute multiple commands in sequence
+- "list_todos": Show/filter todos
+- "edit_todo": Modify existing todo
+
+For complex operations requiring multiple steps, use command_sequence:
+{
+  "action": "command_sequence",
+  "description": "Brief explanation of what this accomplishes",
+  "commands": [
+    {"action": "create_list", "name": "listname"},
+    {"action": "switch_list", "name": "listname"}, 
+    {"action": "add_todo", "title": "task", "priority": "high", "dueDate": "2025-07-31"},
+    {"action": "switch_list", "name": "originallist"},
+    {"action": "delete_todo", "todoNumber": 1}
+  ]
+}
+
+Command Types:
+- create_list: {"action": "create_list", "name": "string"}
+- switch_list: {"action": "switch_list", "name": "string"}  
+- delete_todo: {"action": "delete_todo", "todoNumber": number}
+- add_todo: {"action": "add_todo", "title": "string", "priority": "high|medium|low", "dueDate": "YYYY-MM-DD", "categories": ["array"]}
+- complete_todo: {"action": "complete_todo", "todoNumber": number}
+- edit_todo: {"action": "edit_todo", "todoNumber": number, "title": "string", "priority": "high|medium|low", "dueDate": "YYYY-MM-DD"}
+
+JSON Examples (MUST use structured JSON for these):
+- "Add buy groceries" → {"action": "add_todo", "title": "buy groceries"}
+- "Add these tasks: X, Y, Z" → {"action": "add_multiple_todos", "todos": [...]}
+- "Complete task 1" → {"action": "complete_todo", "todoNumber": 1}
+- "Move high priority items to new Urgent list" → {"action": "command_sequence", "commands": [...]}
+- "I'd like to add X, Y, Z due Sunday" → {"action": "add_multiple_todos", "todos": [{"title": "X", "dueDate": "2025-08-03"}, ...]}
+
+Conversational Examples (use plain text for these):
+- "What should I focus on today?" → analyze priorities and provide advice
+- "How am I doing with my goals?" → provide insights about progress
+- "What's the best way to organize tasks?" → give organizational advice
+
+CRITICAL: If the user wants to ADD, COMPLETE, DELETE, EDIT, or CREATE anything, you MUST return JSON to actually execute it. Conversational responses don't modify the database.
+
+Always preserve todo details (title, priority, due date, categories) when moving between lists.`;
+  }
+
+  async chatWithAI(message: string, context: any, conversationHistory: string[] = []): Promise<any> {
+    if (!this.client) {
+      throw new Error('OpenAI client not configured. Please set OPENAI_API_KEY environment variable.');
+    }
+
+    const systemPrompt = this.getChatSystemPrompt(context, conversationHistory);
+
+    try {
+      const response = await this.client.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message }
+        ],
+        max_tokens: 600,
+        temperature: 0.3
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response from OpenAI');
+      }
+
+      // Try to parse as JSON first, if it fails return as conversational text
+      try {
+        return JSON.parse(content);
+      } catch {
+        // Return as conversational response
+        return {
+          action: 'conversational',
+          message: content
+        };
+      }
+    } catch (error) {
+      console.error('OpenAI chat error:', error);
+      throw new Error(`AI chat failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  getCurrentSystemPrompt(context: any): string {
+    if (!this.isConfigured()) {
+      return 'AI is not configured. Set OPENAI_API_KEY to see the system prompt.';
+    }
+
+    return `You are a helpful assistant that parses natural language todo requests into structured JSON.
+
+Current context:
+- Current list: ${context.currentList?.name || 'None'}
+- Available lists: ${context.availableLists?.map((l: any) => l.name).join(', ') || 'None'}
+- Today's date: ${new Date().toISOString().split('T')[0]}
+
+Parse the user's input and determine what action they want to take. Respond with valid JSON only.
+
+Available actions:
+- "add_todo": Add a single todo item
+- "add_multiple_todos": Add multiple todo items from a paragraph or list
+- "list_todos": Show todos (can be filtered)
+- "complete_todo": Mark a todo as completed  
+- "edit_todo": Modify an existing todo
+- "create_list": Create a new todo list
+- "switch_list": Switch to a different list
+- "unknown": Unable to parse the request
+
+JSON Schema for add_todo:
+{
+  "action": "add_todo",
+  "title": "string (required)",
+  "description": "string (optional)",
+  "priority": "high|medium|low (optional)",
+  "dueDate": "YYYY-MM-DD format (optional)",
+  "categories": ["array of strings (optional)"]
+}
+
+JSON Schema for add_multiple_todos:
+{
+  "action": "add_multiple_todos",
+  "todos": [
+    {
+      "title": "string (required)",
+      "description": "string (optional)",
+      "priority": "high|medium|low (optional)",
+      "dueDate": "YYYY-MM-DD format (optional)",
+      "categories": ["array of strings (optional)"]
+    }
+  ]
+}
+
+Date parsing guidelines:
+- "today" -> use today's date
+- "tomorrow" -> add 1 day to today's date
+- "next week" -> add 7 days to today's date
+- "Monday", "Tuesday", etc. -> find the next occurrence of that day
+- "next Monday" -> find the Monday after next Monday
+- "in 3 days" -> add 3 days to today's date
+- "2024-01-15" -> use as-is in YYYY-MM-DD format
+
+Examples:
+"Add buy groceries with high priority" -> {"action": "add_todo", "title": "buy groceries", "priority": "high"}
+"Add get milk tomorrow" -> {"action": "add_todo", "title": "get milk", "dueDate": "${new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0]}"}
+"Add call doctor next Monday" -> {"action": "add_todo", "title": "call doctor", "dueDate": "2024-XX-XX"}
+"Add finish project with high priority due Friday" -> {"action": "add_todo", "title": "finish project", "priority": "high", "dueDate": "2024-XX-XX"}
+
+Multiple todos examples:
+"I need to buy groceries, call the dentist, and finish the report by Friday" -> {"action": "add_multiple_todos", "todos": [{"title": "buy groceries"}, {"title": "call the dentist"}, {"title": "finish the report", "dueDate": "2025-XX-XX"}]}
+"Add these tasks: 1) review code 2) update documentation 3) send email to team" -> {"action": "add_multiple_todos", "todos": [{"title": "review code"}, {"title": "update documentation"}, {"title": "send email to team"}]}
+"Tomorrow I need to pick up dry cleaning, go to the bank, and schedule a haircut" -> {"action": "add_multiple_todos", "todos": [{"title": "pick up dry cleaning", "dueDate": "${new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0]}"}, {"title": "go to the bank", "dueDate": "${new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0]}"}, {"title": "schedule a haircut", "dueDate": "${new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0]}"}]}
+"High priority tasks: fix the bug in login system and deploy to production" -> {"action": "add_multiple_todos", "todos": [{"title": "fix the bug in login system", "priority": "high"}, {"title": "deploy to production", "priority": "high"}]}
+
+Other examples:
+"Show me my work todos" -> {"action": "list_todos", "filter": {"category": "work"}}
+"Complete the first task" -> {"action": "complete_todo", "todoNumber": 1}
+"Create shopping list" -> {"action": "create_list", "name": "shopping"}
+"Switch to work list" -> {"action": "switch_list", "name": "work"}`;
+  }
 }

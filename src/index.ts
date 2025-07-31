@@ -117,7 +117,7 @@ function startInteractiveMode() {
   }
   
   // Available slash commands for autocomplete
-  const slashCommands = ['/help', '/exit', '/lists', '/create', '/switch', '/add', '/list', '/complete', '/uncomplete', '/delete', '/edit', '/filter', '/clear', '/delete-list', '/history', '/config'];
+  const slashCommands = ['/help', '/exit', '/lists', '/create', '/switch', '/add', '/list', '/complete', '/uncomplete', '/delete', '/edit', '/filter', '/clear', '/delete-list', '/history', '/config', '/prompt', '/chat'];
   
   // Detect if we're in a proper TTY environment
   const isRealTTY = process.stdin.isTTY === true && process.stdout.isTTY === true;
@@ -150,6 +150,45 @@ function startInteractiveMode() {
     }
   }
 
+  // Chat mode variables  
+  let chatMode = false;
+  const conversationHistory: string[] = [];
+  const maxConversationHistory = 10;
+
+  // Function to handle single chat messages
+  async function handleChatMessage(message: string): Promise<void> {
+    try {
+      console.log('🤖 Processing your message...');
+      
+      const context = {
+        currentList: listService.getCurrentList(),
+        availableLists: listService.getAllLists()
+      };
+      
+      const response = await openAIService.chatWithAI(message, context, conversationHistory);
+      
+      // Add to conversation history
+      conversationHistory.push(`User: ${message}`);
+      
+      if (response.action === 'conversational') {
+        console.log(`🤖 ${response.message}\n`);
+        conversationHistory.push(`Assistant: ${response.message}`);
+      } else {
+        // Handle structured command response
+        await handleParsedCommand(response);
+        conversationHistory.push(`Assistant: Executed ${response.action} command`);
+      }
+      
+      // Keep conversation history manageable
+      while (conversationHistory.length > maxConversationHistory) {
+        conversationHistory.shift();
+      }
+      
+    } catch (error) {
+      console.log(`❌ Chat failed: ${error}\n`);
+    }
+  }
+
   // Function to handle AI-parsed commands
   async function handleParsedCommand(parsed: any): Promise<void> {
     switch (parsed.action) {
@@ -173,6 +212,15 @@ function startInteractiveMode() {
         break;
       case 'switch_list':
         handleSwitchList(parsed);
+        break;
+      case 'delete_todo':
+        handleDeleteTodo(parsed);
+        break;
+      case 'command_sequence':
+        await handleCommandSequence(parsed);
+        break;
+      case 'conversational':
+        console.log(`🤖 ${parsed.message}\n`);
         break;
       case 'unknown':
       default:
@@ -421,10 +469,132 @@ function startInteractiveMode() {
     }
   }
 
+  function handleDeleteTodo(parsed: any): void {
+    const currentList = listService.getCurrentList();
+    if (!currentList) {
+      console.log('❌ No current list selected. Use /create to create a list first.\n');
+      return;
+    }
+
+    const todoIndex = (parsed.todoNumber || parsed.index) - 1;
+    if (isNaN(todoIndex) || todoIndex < 0 || todoIndex >= currentList.todos.length) {
+      console.log('❌ Invalid todo number. Use /list to see available todos.\n');
+      return;
+    }
+
+    try {
+      const todo = currentList.todos[todoIndex];
+      listService.deleteTodoFromCurrentList(todo.id);
+      console.log(`✅ Deleted "${todo.title}"\n`);
+    } catch (error) {
+      console.log(`❌ Failed to delete todo: ${error}\n`);
+    }
+  }
+
+  // Handle command sequences with confirmation
+  async function handleCommandSequence(parsed: any): Promise<void> {
+    if (!parsed.commands || !Array.isArray(parsed.commands)) {
+      console.log('❌ Invalid command sequence format.\n');
+      return;
+    }
+
+    console.log('\n🤖 I suggest the following sequence of commands:');
+    if (parsed.description) {
+      console.log(`   ${parsed.description}`);
+    }
+    console.log();
+
+    // Pretty print the command sequence
+    parsed.commands.forEach((cmd: any, index: number) => {
+      console.log(`   ${index + 1}. ${formatCommandForDisplay(cmd)}`);
+    });
+
+    console.log();
+    
+    // Ask for confirmation
+    const rl2 = require('readline').createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    return new Promise((resolve) => {
+      rl2.question('Execute these commands? (y/n): ', async (answer: string) => {
+        rl2.close();
+        
+        if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
+          console.log('\n🔄 Executing command sequence...\n');
+          
+          for (let i = 0; i < parsed.commands.length; i++) {
+            const cmd = parsed.commands[i];
+            console.log(`   ${i + 1}/${parsed.commands.length}: ${formatCommandForDisplay(cmd)}`);
+            
+            try {
+              await handleParsedCommand(cmd);
+            } catch (error) {
+              console.log(`   ❌ Command ${i + 1} failed: ${error}`);
+              console.log('   ⚠️  Stopping sequence execution.\n');
+              resolve();
+              return;
+            }
+          }
+          
+          console.log('✅ Command sequence completed successfully!\n');
+        } else {
+          console.log('❌ Command sequence cancelled.\n');
+        }
+        resolve();
+      });
+    });
+  }
+
+  // Format command for display
+  function formatCommandForDisplay(cmd: any): string {
+    switch (cmd.action) {
+      case 'create_list':
+        return `/create "${cmd.name}"`;
+      case 'switch_list':
+        return `/switch "${cmd.name}"`;
+      case 'add_todo':
+        let addCmd = `/add "${cmd.title}"`;
+        if (cmd.priority) addCmd += ` --priority ${cmd.priority}`;
+        if (cmd.dueDate) addCmd += ` --due ${cmd.dueDate}`;
+        if (cmd.categories && cmd.categories.length > 0) addCmd += ` --category "${cmd.categories.join(',')}"`;
+        return addCmd;
+      case 'delete_todo':
+        return `/delete ${cmd.todoNumber}`;
+      case 'complete_todo':
+        return `/complete ${cmd.todoNumber}`;
+      case 'edit_todo':
+        let editCmd = `/edit ${cmd.todoNumber}`;
+        if (cmd.title) editCmd += ` --title "${cmd.title}"`;
+        if (cmd.priority) editCmd += ` --priority ${cmd.priority}`;
+        if (cmd.dueDate) editCmd += ` --due ${cmd.dueDate}`;
+        return editCmd;
+      default:
+        return JSON.stringify(cmd);
+    }
+  }
+
   rl.prompt();
 
   rl.on('line', async (input) => {
     const trimmedInput = input.trim();
+    
+    // Handle chat mode exit
+    if (chatMode && (trimmedInput === '/exit' || trimmedInput === 'exit')) {
+      console.log('💬 Exiting chat mode...\n');
+      chatMode = false;
+      rl.setPrompt('> ');
+      rl.prompt();
+      return;
+    }
+    
+    // Handle chat mode messages
+    if (chatMode && trimmedInput) {
+      await handleChatMessage(trimmedInput);
+      rl.prompt();
+      return;
+    }
     
     // Manually add non-empty, non-exit commands to history (avoiding duplicates)
     if (trimmedInput && trimmedInput !== '/exit' && trimmedInput !== 'exit') {
@@ -471,6 +641,8 @@ function startInteractiveMode() {
       console.log('  Other:');
       console.log('    /history         - Show recent command history');
       console.log('    /config          - Show AI configuration instructions');
+      console.log('    /prompt          - Show current AI system prompt');
+      console.log('    /chat [message]  - Enter AI chat mode or send single message');
       console.log('  General:');
       console.log('    /help            - Show this help');
       console.log('    /exit            - Exit interactive mode\n');
@@ -896,6 +1068,47 @@ function startInteractiveMode() {
       console.log('\n' + openAIService.getConfigurationInstructions() + '\n');
       rl.prompt();
       return;
+    }
+    
+    if (trimmedInput === '/prompt') {
+      const currentList = listService.getCurrentList();
+      const availableLists = listService.getAllLists();
+      const context = {
+        currentList,
+        availableLists
+      };
+      
+      console.log('\n📝 Current AI System Prompt:');
+      console.log('=' .repeat(60));
+      console.log(openAIService.getCurrentSystemPrompt(context));
+      console.log('=' .repeat(60) + '\n');
+      rl.prompt();
+      return;
+    }
+    
+    if (trimmedInput.startsWith('/chat')) {
+      if (!openAIService.isConfigured()) {
+        console.log('\n❌ AI is not configured. Use /config for setup instructions.\n');
+        rl.prompt();
+        return;
+      }
+
+      const chatMessage = trimmedInput.slice(5).trim(); // Remove '/chat'
+      
+      if (chatMessage) {
+        // Single chat message
+        await handleChatMessage(chatMessage);
+        rl.prompt();
+        return;
+      } else {
+        // Enter chat mode
+        console.log('\n💬 Entering AI Chat Mode. Type "exit" to return to normal mode.\n');
+        chatMode = true;
+        console.log('🤖 How can I help you manage your todos today?');
+        rl.setPrompt('chat> ');
+        rl.prompt();
+        return;
+      }
     }
     
     if (trimmedInput === '/clear') {
