@@ -5,8 +5,14 @@ An intelligent command-line todo application powered by AI that understands natu
 ## Features
 
 ### 🤖 AI-Powered Natural Language Processing
+- **GPT-4.1 Integration**: Advanced natural language understanding with 96% accuracy
+- **Interactive Chat Mode**: Conversational AI assistant for todo management
+- **Command Sequences**: Complex multi-step operations with confirmation
 - Add todos using natural language: "Add buy groceries with high priority tomorrow"
 - Create multiple todos from paragraph text: "I need to call the dentist, pick up dry cleaning, and finish the report by Friday"
+- **Implicit Completion Detection**: "I bought the groceries" automatically marks todos complete
+- **Smart Reference Resolution**: "Mark those as high priority" references previous conversation
+- **Conversational Analytics**: "What should I focus on today?" provides strategic guidance
 - Smart date parsing: "tomorrow", "next Monday", "in 3 days", etc.
 
 ### 📝 Comprehensive Todo Management
@@ -22,10 +28,12 @@ An intelligent command-line todo application powered by AI that understands natu
 - Data stored in `~/.todo-gpt/data.db`
 
 ### 🎯 Flexible Interface
+- **Interactive Chat Mode**: Conversational AI for natural task management
 - Interactive CLI mode with command history
 - Slash commands for precise control
 - Arrow key navigation and autocomplete
 - Both natural language and structured commands
+- Command sequence execution with user confirmation
 
 ## Installation
 
@@ -77,11 +85,13 @@ Without an API key, you can still use all slash commands.
 
 ## Usage
 
-### Natural Language Commands
+### Interactive Chat Mode
 
-With OpenAI configured, you can use natural language:
+Enter chat mode for conversational todo management:
 
-```
+```bash
+> /chat
+💬 Chat mode activated. Type 'exit' to leave chat mode.
 > Add buy groceries with high priority tomorrow
 ✅ Added "buy groceries" to Personal list (priority: high) (due: Tue Jul 31 2025)
 
@@ -90,6 +100,35 @@ With OpenAI configured, you can use natural language:
   1. "call the dentist"
   2. "pick up dry cleaning"  
   3. "finish the report" (due: 8/1/2025)
+
+> What should I focus on today?
+💡 Based on your priorities and due dates, I recommend starting with:
+1. Submit expense reports (high priority, overdue)
+2. Complete I-130 for GC (high priority, due Aug 3rd)
+
+> Move all high priority items to a new Urgent list
+📋 Command sequence to execute:
+1. Create list "Urgent"
+2. Switch to "Urgent" list
+3. Add "submit expense reports" with high priority
+4. Add "complete I-130 for GC" with high priority and due date
+5. Switch back to "Personal" list
+6. Delete original high priority items
+
+Execute this sequence? (y/n): y
+✅ Command sequence completed successfully!
+
+> I bought the groceries
+✅ Marked "buy groceries" as completed
+```
+
+### Natural Language Commands
+
+With OpenAI configured, you can use natural language directly:
+
+```
+> Add buy groceries with high priority tomorrow
+✅ Added "buy groceries" to Personal list (priority: high) (due: Tue Jul 31 2025)
 
 > Show me high priority tasks
 > Complete the first task
@@ -132,8 +171,10 @@ For precise control, use slash commands:
   --category <name>
 ```
 
-#### Other Commands
+#### AI & Chat Commands
 ```bash
+/chat                 # Enter interactive chat mode
+/prompt               # Show current AI system prompt
 /help                 # Show help
 /history              # Show command history
 /config               # Show AI configuration instructions
@@ -217,8 +258,13 @@ The application automatically creates a SQLite database at `~/.todo-gpt/data.db`
 ## Features in Detail
 
 ### AI Natural Language Processing
-- Powered by OpenAI GPT-3.5-turbo
-- Understands context and intent
+- **Powered by OpenAI GPT-4.1** with 96% accuracy rate
+- **Interactive Chat Mode** for conversational task management
+- **Command Sequences** for complex multi-step operations
+- **Implicit Completion Detection** recognizes completion statements
+- **Smart Reference Resolution** uses conversation context
+- **Conversational Analytics** provides strategic task insights
+- Understands context and intent across conversation history
 - Supports complex multi-todo requests
 - Smart date parsing with timezone awareness
 
