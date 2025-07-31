@@ -176,11 +176,15 @@ Current Context:
 Current Todos in "${context.currentList?.name || 'No List'}":
 ${this.formatTodosForContext(context)}${historyContext}
 
-IMPORTANT: When users request actions that modify the todo list (adding, completing, deleting, editing tasks, creating lists, etc.), you MUST respond with structured JSON commands to actually execute those actions. Only use conversational responses for questions, advice, or explanations.
+IMPORTANT: You have full access to the user's current todos shown above. Use this data to answer questions directly.
 
 Response Types:
-1. **Structured JSON** (for ANY actionable request): Return JSON to execute the action
-2. **Conversational text** (for questions/advice only): Return plain text response
+1. **Structured JSON** (for modifying todo list): Return JSON to execute the action
+2. **Data Analysis** (for questions about existing todos): Answer directly using provided context
+3. **Advice/Strategy** (for recommendations): Provide helpful guidance based on context
+
+CRITICAL: For questions about existing todos, analyze the provided data directly and give specific answers. 
+Do NOT tell users to "search" or "look for" - YOU have the data and should analyze it immediately.
 
 Available JSON Actions:
 - "add_todo": Add a single todo
@@ -214,21 +218,35 @@ Command Types:
 - complete_todo: {"action": "complete_todo", "todoNumber": number}
 - edit_todo: {"action": "edit_todo", "todoNumber": number, "title": "string", "priority": "high|medium|low", "dueDate": "YYYY-MM-DD"}
 
-JSON Examples (MUST use structured JSON for these):
+**JSON Command Examples (use structured JSON):**
 - "Add buy groceries" → {"action": "add_todo", "title": "buy groceries"}
-- "Add these tasks: X, Y, Z" → {"action": "add_multiple_todos", "todos": [...]}
 - "Complete task 1" → {"action": "complete_todo", "todoNumber": 1}
 - "Move high priority items to new Urgent list" → {"action": "command_sequence", "commands": [...]}
-- "I'd like to add X, Y, Z due Sunday" → {"action": "add_multiple_todos", "todos": [{"title": "X", "dueDate": "2025-08-03"}, ...]}
 
-Conversational Examples (use plain text for these):
-- "What should I focus on today?" → analyze priorities and provide advice
-- "How am I doing with my goals?" → provide insights about progress
-- "What's the best way to organize tasks?" → give organizational advice
+**Data Analysis Examples (answer directly using provided context):**
+- "Which todos mention Riya?" → "2 todos mention Riya: 'buy Riya a new lunch bag' and 'Register Riya for belt test'"
+- "What's due today?" → "3 tasks are due today: [list specific tasks with titles]"
+- "How many high priority tasks do I have?" → "You have 2 high priority tasks: [list specific titles]"
+- "What have I completed?" → "You've completed 1 task: 'order items on Amazon'"
+- "Which tasks are overdue?" → "Based on today's date, [specific analysis of due dates]"
+- "Show me work-related todos" → "I found 3 work-related tasks: [list specific matches]"
 
-CRITICAL: If the user wants to ADD, COMPLETE, DELETE, EDIT, or CREATE anything, you MUST return JSON to actually execute it. Conversational responses don't modify the database.
+**Strategy/Advice Examples (provide recommendations):**
+- "What should I focus on today?" → Analyze current todos, priorities, and due dates to suggest specific focus
+- "How should I organize my week?" → Provide organizational strategy based on current workload
 
-Always preserve todo details (title, priority, due date, categories) when moving between lists.`;
+**Key Decision Rules:**
+1. **Modification requests** (add, complete, delete, edit, create) → Return JSON commands
+2. **Analysis questions** (which, what, how many, show me) → Answer directly using provided todo context
+3. **Strategy questions** (what should I focus on, how to organize) → Provide advice based on context
+
+**Context Usage Guidelines:**
+- Always reference specific todo titles, due dates, and priorities from the provided context
+- Count and enumerate todos precisely when asked for quantities
+- When filtering (e.g., "work-related", "high priority"), scan all todos and list matches
+- Compare due dates against today's date (${new Date().toISOString().split('T')[0]}) for overdue analysis
+
+CRITICAL: You have the complete todo list above - use it to answer questions immediately and specifically.`;
   }
 
   async chatWithAI(message: string, context: any, conversationHistory: string[] = []): Promise<any> {
