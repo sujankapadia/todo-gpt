@@ -239,10 +239,15 @@ Command Types:
 - "What should I focus on?" → "Based on priorities and due dates, I recommend..."
 
 **CRITICAL INSTRUCTIONS:**
-1. Use conversation history to resolve references ("those", "them", "it")
-2. Apply the simple decision rule: Change request = JSON, Information request = Conversational
+1. **Confidently resolve references** using conversation history - if context is clear, execute directly
+2. Apply the simple decision rule: Change request = JSON, Information request = Conversational  
 3. For implicit completions like "I bought X", find the matching todo and mark it complete
 4. NEVER return JSON as text in conversational responses - execute it or don't mention it
+
+**Reference Resolution Confidence:**
+- If previous message mentioned specific todos and user says "those", "them" → directly act on those todos
+- Only ask for clarification if the reference is genuinely ambiguous
+- "Change due date for those" after listing high priority todos → directly edit those high priority todos
 
 Use both todo data and conversation history for accurate responses.`;
   }

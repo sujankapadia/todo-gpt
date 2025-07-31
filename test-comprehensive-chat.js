@@ -189,25 +189,50 @@ async function testComprehensiveChatScenarios() {
       'should reference first item from previous response'
     );
     
+    // === CONFIDENT REFERENCE RESOLUTION TESTS ===
+    console.log('🎯 TESTING CONFIDENT REFERENCE RESOLUTION\n');
+    
+    // Establish context for confident resolution
+    await runTest(
+      'TEST 12: High Priority Context Setup',
+      'Show me my high priority tasks',
+      'conversational',
+      'should list high priority tasks for confident reference'
+    );
+    
+    await runTest(
+      'TEST 13: Confident Reference Resolution',
+      'Can you change the due date for those to August 15th?',
+      'command_sequence',
+      'should confidently resolve "those" to high priority tasks without asking for clarification'
+    );
+    
+    await runTest(
+      'TEST 14: Direct Reference After List',
+      'Update them all to medium priority',
+      'command_sequence',
+      'should resolve "them all" to previously mentioned tasks'
+    );
+    
     // === EXPLICIT COMMAND TESTS ===
     console.log('⚡ TESTING EXPLICIT COMMANDS\n');
     
     await runTest(
-      'TEST 12: Direct Add Command',
+      'TEST 15: Direct Add Command',
       'Add buy groceries with high priority due tomorrow',
       'add_todo',
       'should create new todo with specified attributes'
     );
     
     await runTest(
-      'TEST 13: Direct Complete Command',
+      'TEST 16: Direct Complete Command',
       'Complete task number 1',
       'complete_todo',
       'should mark specified task as complete'
     );
     
     await runTest(
-      'TEST 14: Multiple Todos',
+      'TEST 17: Multiple Todos',
       'Add these tasks: review code, send email, update docs',
       'add_multiple_todos',
       'should create multiple todos from list'
@@ -217,31 +242,48 @@ async function testComprehensiveChatScenarios() {
     console.log('🧠 TESTING COMPLEX SCENARIOS\n');
     
     await runTest(
-      'TEST 15: Command Sequence',
+      'TEST 18: Command Sequence',
       'Move all high priority items to a new Urgent list',
       'command_sequence',
       'should create list and move high priority items'
     );
     
     await runTest(
-      'TEST 16: Mixed Request',
+      'TEST 19: Mixed Request',
       'I finished the I-130 form yesterday, but what else is overdue?',
       'complete_todo',
       'should complete I-130 (prioritize the action over the question)'
+    );
+    
+    // === EDIT FUNCTIONALITY TESTS ===
+    console.log('✏️ TESTING EDIT FUNCTIONALITY\n');
+    
+    await runTest(
+      'TEST 20: Edit Todo Command',
+      'Edit task 1 to have high priority and due date August 20th',
+      'edit_todo',
+      'should update todo with new priority and due date'
+    );
+    
+    await runTest(
+      'TEST 21: Edit Todo Title',
+      'Change the title of task 2 to "submit Q3 expense reports"',
+      'edit_todo',
+      'should update todo title'
     );
     
     // === CONVERSATION FLOW ===
     console.log('💬 TESTING CONVERSATION FLOW\n');
     
     await runTest(
-      'TEST 17: Strategy Question',
+      'TEST 22: Strategy Question',
       'What should I focus on today?',
       'conversational',
       'should provide strategic advice based on priorities and due dates'
     );
     
     await runTest(
-      'TEST 18: Follow-up Question',
+      'TEST 23: Follow-up Question',
       'Why did you recommend that?',
       'conversational',
       'should explain reasoning from previous response'

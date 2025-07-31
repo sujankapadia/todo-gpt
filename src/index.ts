@@ -154,6 +154,7 @@ function startInteractiveMode() {
   let chatMode = false;
   const conversationHistory: string[] = [];
   const maxConversationHistory = 10;
+  let awaitingCommandConfirmation = false;
 
   // Function to handle single chat messages
   async function handleChatMessage(message: string): Promise<void> {
@@ -439,8 +440,76 @@ function startInteractiveMode() {
   }
 
   function handleEditTodo(parsed: any): void {
-    console.log('🚧 Edit functionality via AI is not yet implemented.');
-    console.log('💡 Use the /edit command: /edit <number> --title "new title" --priority high\n');
+    const currentList = listService.getCurrentList();
+    if (!currentList) {
+      console.log('❌ No current list selected. Use /create to create a list first.\n');
+      return;
+    }
+
+    const todoIndex = (parsed.todoNumber || parsed.index) - 1;
+    if (isNaN(todoIndex) || todoIndex < 0 || todoIndex >= currentList.todos.length) {
+      console.log('❌ Invalid todo number. Use /list to see available todos.\n');
+      return;
+    }
+
+    try {
+      const todo = currentList.todos[todoIndex];
+      const updates: any = {};
+      let hasUpdates = false;
+
+      // Check for title update
+      if (parsed.title) {
+        updates.title = parsed.title;
+        hasUpdates = true;
+      }
+
+      // Check for priority update
+      if (parsed.priority) {
+        if (['high', 'medium', 'low'].includes(parsed.priority)) {
+          updates.priority = parsed.priority;
+          hasUpdates = true;
+        } else {
+          console.log('❌ Priority must be one of: high, medium, low\n');
+          return;
+        }
+      }
+
+      // Check for due date update
+      if (parsed.dueDate) {
+        const dueDate = new Date(parsed.dueDate);
+        if (isNaN(dueDate.getTime())) {
+          console.log('❌ Due date must be in YYYY-MM-DD format\n');
+          return;
+        }
+        updates.dueDate = dueDate;
+        hasUpdates = true;
+      }
+
+      // Check for category update
+      if (parsed.categories && Array.isArray(parsed.categories)) {
+        updates.categories = parsed.categories;
+        hasUpdates = true;
+      }
+
+      if (!hasUpdates) {
+        console.log('❌ No updates specified in the edit request.\n');
+        return;
+      }
+
+      // Apply updates
+      todoService.updateTodo(currentList.todos, todo.id, updates);
+      listService.updateTodoInCurrentList(todo);
+
+      let message = `✅ Updated "${todo.title}"`;
+      if (updates.title) message += ` (title updated)`;
+      if (updates.priority) message += ` (priority: ${updates.priority})`;
+      if (updates.dueDate) message += ` (due: ${updates.dueDate.toDateString()})`;
+      if (updates.categories) message += ` (categories: ${updates.categories.join(', ')})`;
+      console.log(message + '\n');
+
+    } catch (error) {
+      console.log(`❌ Failed to edit todo: ${error}\n`);
+    }
   }
 
   function handleCreateList(parsed: any): void {
@@ -517,17 +586,30 @@ function startInteractiveMode() {
 
     console.log();
     
-    // Ask for confirmation
-    const rl2 = require('readline').createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
-
+    // Ask for confirmation using existing readline interface
     return new Promise((resolve) => {
-      rl2.question('Execute these commands? (y/n): ', async (answer: string) => {
-        rl2.close();
+      console.log('Execute these commands? (y/n): ');
+      
+      // Set flags to handle confirmation
+      const originalPrompt = rl.getPrompt();
+      rl.setPrompt('');
+      awaitingCommandConfirmation = true;
+      
+      const confirmationHandler = async (answer: string) => {
+        // Remove this specific listener and reset flags
+        rl.removeListener('line', confirmationHandler);
+        rl.setPrompt(originalPrompt);
+        awaitingCommandConfirmation = false;
         
-        if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
+        const trimmedAnswer = answer.trim().toLowerCase();
+        
+        // If answer is empty, ignore it
+        if (trimmedAnswer === '') {
+          resolve();
+          return;
+        }
+        
+        if (trimmedAnswer === 'y' || trimmedAnswer === 'yes') {
           console.log('\n🔄 Executing command sequence...\n');
           
           for (let i = 0; i < parsed.commands.length; i++) {
@@ -548,8 +630,12 @@ function startInteractiveMode() {
         } else {
           console.log('❌ Command sequence cancelled.\n');
         }
+        
         resolve();
-      });
+      };
+      
+      // Add listener for the confirmation
+      rl.once('line', confirmationHandler);
     });
   }
 
@@ -586,6 +672,7 @@ function startInteractiveMode() {
   rl.on('line', async (input) => {
     const trimmedInput = input.trim();
     
+    
     // Handle chat mode exit
     if (chatMode && (trimmedInput === '/exit' || trimmedInput === 'exit')) {
       console.log('💬 Exiting chat mode...\n');
@@ -595,8 +682,14 @@ function startInteractiveMode() {
       return;
     }
     
+    // Skip processing if we're awaiting command confirmation
+    if (awaitingCommandConfirmation) {
+      // Let the confirmation handler deal with this input
+      return;
+    }
+    
     // Handle chat mode messages
-    if (chatMode && trimmedInput) {
+    if (chatMode && trimmedInput !== '') {
       await handleChatMessage(trimmedInput);
       rl.prompt();
       return;
