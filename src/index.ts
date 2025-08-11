@@ -117,7 +117,7 @@ function startInteractiveMode() {
   }
   
   // Available slash commands for autocomplete
-  const slashCommands = ['/help', '/exit', '/lists', '/create', '/switch', '/add', '/list', '/complete', '/uncomplete', '/delete', '/edit', '/filter', '/clear', '/delete-list', '/history', '/config'];
+  const slashCommands = ['/help', '/exit', '/lists', '/create', '/switch', '/add', '/list', '/complete', '/uncomplete', '/delete', '/edit', '/filter', '/clear', '/delete-list', '/history', '/config', '/prompt'];
   
   // Detect if we're in a proper TTY environment
   const isRealTTY = process.stdin.isTTY === true && process.stdout.isTTY === true;
@@ -471,6 +471,7 @@ function startInteractiveMode() {
       console.log('  Other:');
       console.log('    /history         - Show recent command history');
       console.log('    /config          - Show AI configuration instructions');
+      console.log('    /prompt          - Show current AI system prompt');
       console.log('  General:');
       console.log('    /help            - Show this help');
       console.log('    /exit            - Exit interactive mode\n');
@@ -898,6 +899,22 @@ function startInteractiveMode() {
       return;
     }
     
+    if (trimmedInput === '/prompt') {
+      const currentList = listService.getCurrentList();
+      const availableLists = listService.getAllLists();
+      const context = {
+        currentList,
+        availableLists
+      };
+      
+      console.log('\n📝 Current AI System Prompt:');
+      console.log('=' .repeat(60));
+      console.log(openAIService.getCurrentSystemPrompt(context));
+      console.log('=' .repeat(60) + '\n');
+      rl.prompt();
+      return;
+    }
+    
     if (trimmedInput === '/clear') {
       const currentList = listService.getCurrentList();
       if (!currentList) {
@@ -973,6 +990,13 @@ function startInteractiveMode() {
         };
         
         const parsed = await openAIService.parseNaturalLanguage(trimmedInput, context);
+        
+        // DEBUG: Show request type detection and raw response
+        console.log('🔍 DEBUG INFO:');
+        console.log(`   Request Type Detected: ${parsed.action || 'unknown'}`);
+        console.log(`   Raw LLM Response: ${JSON.stringify(parsed, null, 2)}`);
+        console.log('');
+        
         await handleParsedCommand(parsed);
         
       } catch (error) {
