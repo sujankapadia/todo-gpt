@@ -100,13 +100,14 @@ Other examples:
 
     try {
       const response = await this.client.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: input }
         ],
         max_tokens: 200,
-        temperature: 0.1 // Low temperature for consistent parsing
+        temperature: 0.1, // Low temperature for consistent parsing
+        response_format: {"type": "json_object"}, // Return JSON
       });
 
       const content = response.choices[0]?.message?.content;
