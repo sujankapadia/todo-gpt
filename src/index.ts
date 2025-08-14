@@ -211,6 +211,9 @@ function startInteractiveMode() {
       case 'complete_todo':
         handleCompleteTodo(parsed);
         break;
+      case 'uncomplete_todo':
+        handleUncompleteTodo(parsed);
+        break;
       case 'edit_todo':
         handleEditTodo(parsed);
         break;
@@ -436,6 +439,29 @@ function startInteractiveMode() {
       console.log(`✅ Completed "${todo.title}"\n`);
     } catch (error) {
       console.log(`❌ Failed to complete todo: ${error}\n`);
+    }
+  }
+
+  function handleUncompleteTodo(parsed: any): void {
+    const currentList = listService.getCurrentList();
+    if (!currentList) {
+      console.log('❌ No current list selected. Use /create to create a list first.\n');
+      return;
+    }
+
+    const todoIndex = (parsed.todoNumber || parsed.index) - 1;
+    if (isNaN(todoIndex) || todoIndex < 0 || todoIndex >= currentList.todos.length) {
+      console.log('❌ Invalid todo number. Use /list to see available todos.\n');
+      return;
+    }
+
+    try {
+      const todo = currentList.todos[todoIndex];
+      todoService.uncompleteTodo(currentList.todos, todo.id);
+      listService.updateTodoInCurrentList(todo);
+      console.log(`✅ Marked "${todo.title}" as not completed\n`);
+    } catch (error) {
+      console.log(`❌ Failed to uncomplete todo: ${error}\n`);
     }
   }
 

@@ -51,7 +51,9 @@ Available actions:
 - "add_multiple_todos": Add multiple todo items from a paragraph or list
 - "list_todos": Show todos (can be filtered)
 - "complete_todo": Mark a todo as completed  
+- "uncomplete_todo": Mark a todo as not completed
 - "edit_todo": Modify an existing todo
+- "delete_todo": Delete a todo
 - "create_list": Create a new todo list
 - "switch_list": Switch to a different list
 - "unknown": Unable to parse the request
@@ -108,6 +110,22 @@ Completion examples (match to specific todo numbers from current list):
 "Finished going to the dentist" -> {"action": "complete_todo", "todoNumber": 2} (if todo 2 is "go to the dentist")
 "I've completed the FSA enrollment" -> {"action": "complete_todo", "todoNumber": 1} (if todo 1 is "Enroll in FSA")
 "Done with the PECO bill" -> {"action": "complete_todo", "todoNumber": 3} (if todo 3 is "pay the PECO bill")
+
+Edit examples (match to specific todo numbers and modify properties):
+"Make the dentist appointment high priority" -> {"action": "edit_todo", "todoNumber": 2, "priority": "high"} (if todo 2 is "go to the dentist")
+"Change FSA deadline to tomorrow" -> {"action": "edit_todo", "todoNumber": 1, "dueDate": "2025-08-15"} (if todo 1 is "Enroll in FSA")
+"Update the Amazon return title" -> {"action": "edit_todo", "todoNumber": 4, "title": "return Amazon package today"} (if todo 4 is "return an Amazon package")
+"Make PECO bill medium priority" -> {"action": "edit_todo", "todoNumber": 3, "priority": "medium"} (if todo 3 is "pay the PECO bill")
+
+Delete examples (match to specific todo numbers):
+"Delete the dentist appointment" -> {"action": "delete_todo", "todoNumber": 2} (if todo 2 is "go to the dentist")
+"Remove the Amazon return task" -> {"action": "delete_todo", "todoNumber": 4} (if todo 4 is "return an Amazon package")
+"Get rid of the PECO bill todo" -> {"action": "delete_todo", "todoNumber": 3} (if todo 3 is "pay the PECO bill")
+
+Uncomplete examples (match to specific todo numbers):
+"Mark FSA as not done" -> {"action": "uncomplete_todo", "todoNumber": 1} (if todo 1 is "Enroll in FSA")
+"Uncomplete the grocery task" -> {"action": "uncomplete_todo", "todoNumber": 3} (if todo 3 is "buy groceries")
+"I need to redo the dentist appointment" -> {"action": "uncomplete_todo", "todoNumber": 2} (if todo 2 is "go to the dentist")
 
 Other examples:
 "Show me my work todos" -> {"action": "list_todos", "filter": {"category": "work"}}
