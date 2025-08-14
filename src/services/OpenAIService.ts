@@ -229,6 +229,7 @@ Available JSON Actions:
 - "add_todo": Add a single todo
 - "add_multiple_todos": Add multiple todos
 - "complete_todo": Mark todo completed  
+- "uncomplete_todo": Mark todo as not completed
 - "create_list": Create new list
 - "switch_list": Switch to different list
 - "delete_todo": Delete a todo
@@ -255,16 +256,41 @@ Command Types:
 - delete_todo: {"action": "delete_todo", "todoNumber": number}
 - add_todo: {"action": "add_todo", "title": "string", "priority": "high|medium|low", "dueDate": "YYYY-MM-DD", "categories": ["array"]}
 - complete_todo: {"action": "complete_todo", "todoNumber": number}
+- uncomplete_todo: {"action": "uncomplete_todo", "todoNumber": number}
 - edit_todo: {"action": "edit_todo", "todoNumber": number, "title": "string", "priority": "high|medium|low", "dueDate": "YYYY-MM-DD"}
 
 **EXAMPLES:**
 
 **Change Requests (→ JSON Command):**
+
+**Add Examples:**
 - "Add buy groceries" → {"action": "add_todo", "title": "buy groceries"}
+- "Add high priority task due tomorrow" → {"action": "add_todo", "title": "task", "priority": "high", "dueDate": "2025-08-15"}
+
+**Complete Examples (match to specific todo numbers):**
 - "Complete task 1" → {"action": "complete_todo", "todoNumber": 1}
 - "I've bought Riya a new lunch bag, actually" → {"action": "complete_todo", "todoNumber": 1}
+- "Already returned the Amazon package" → {"action": "complete_todo", "todoNumber": 4} (if todo 4 is "return an Amazon package")
+- "Finished going to the dentist" → {"action": "complete_todo", "todoNumber": 2} (if todo 2 is "go to the dentist")
+- "I finished the report yesterday" → {"action": "complete_todo", "todoNumber": X} (match to specific todo)
+
+**Edit Examples (match and modify properties):**
+- "Make the dentist appointment high priority" → {"action": "edit_todo", "todoNumber": 2, "priority": "high"}
+- "Change FSA deadline to tomorrow" → {"action": "edit_todo", "todoNumber": 1, "dueDate": "2025-08-15"}
+- "Update the Amazon return title to be more specific" → {"action": "edit_todo", "todoNumber": 4, "title": "return Amazon package today"}
+
+**Delete Examples (match to specific todos):**
+- "Delete the dentist appointment" → {"action": "delete_todo", "todoNumber": 2}
+- "Remove the Amazon return task" → {"action": "delete_todo", "todoNumber": 4}
+- "Get rid of the PECO bill todo" → {"action": "delete_todo", "todoNumber": 3}
+
+**Uncomplete Examples (match to specific todos):**
+- "Mark FSA as not done" → {"action": "uncomplete_todo", "todoNumber": 1}
+- "I need to redo the dentist appointment" → {"action": "uncomplete_todo", "todoNumber": 2}
+- "Uncomplete the grocery task" → {"action": "uncomplete_todo", "todoNumber": 3}
+
+**Complex Operations:**
 - "Mark those as high priority" → {"action": "command_sequence", "commands": [...]}
-- "I finished the report yesterday" → {"action": "complete_todo", "todoNumber": X}
 
 **Information Requests (→ Conversational Response):**
 - "Which todos mention Riya?" → "2 todos mention Riya: 'buy Riya a new lunch bag' and 'Register Riya for belt test'"
