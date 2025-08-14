@@ -200,10 +200,10 @@ function startInteractiveMode() {
   async function handleParsedCommand(parsed: any): Promise<void> {
     switch (parsed.action) {
       case 'add_todo':
-        await handleAddTodo(parsed);
+        handleAddTodo(parsed);
         break;
       case 'add_multiple_todos':
-        await handleAddMultipleTodos(parsed);
+        handleAddMultipleTodos(parsed);
         break;
       case 'list_todos':
         handleListTodos(parsed);
@@ -241,7 +241,7 @@ function startInteractiveMode() {
   }
 
   // Helper functions for each action type
-  async function handleAddTodo(parsed: any): Promise<void> {
+  function handleAddTodo(parsed: any): void {
     const currentList = listService.getCurrentList();
     if (!currentList) {
       console.log('❌ No current list selected. Use /create to create a list first.\n');
@@ -289,7 +289,7 @@ function startInteractiveMode() {
     }
   }
 
-  async function handleAddMultipleTodos(parsed: any): Promise<void> {
+  function handleAddMultipleTodos(parsed: any): void {
     const currentList = listService.getCurrentList();
     if (!currentList) {
       console.log('❌ No current list selected. Use /create to create a list first.\n');
