@@ -35,6 +35,15 @@ Current context:
 - Available lists: ${context.availableLists?.map((l: any) => l.name).join(', ') || 'None'}
 - Today's date: ${new Date().toISOString().split('T')[0]}
 
+Current Todos in "${context.currentList?.name || 'No List'}":
+${this.formatTodosForContext(context)}
+
+IMPORTANT: For completion requests, look at the current todos above and match the user's statement to the specific todo number. Consider:
+- Exact title matches: "I returned the Amazon package" matches "return an Amazon package" 
+- Partial matches: "went to dentist" matches "go to the dentist"
+- Past tense variations: "bought groceries" matches "buy groceries"
+- Action completion: "finished the report" matches "finish the report"
+
 Parse the user's input and determine what action they want to take. Respond with valid JSON only.
 
 Available actions:
@@ -92,9 +101,16 @@ Multiple todos examples:
 "Tomorrow I need to pick up dry cleaning, go to the bank, and schedule a haircut" -> {"action": "add_multiple_todos", "todos": [{"title": "pick up dry cleaning", "dueDate": "${new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0]}"}, {"title": "go to the bank", "dueDate": "${new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0]}"}, {"title": "schedule a haircut", "dueDate": "${new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0]}"}]}
 "High priority tasks: fix the bug in login system and deploy to production" -> {"action": "add_multiple_todos", "todos": [{"title": "fix the bug in login system", "priority": "high"}, {"title": "deploy to production", "priority": "high"}]}
 
+Completion examples (match to specific todo numbers from current list):
+"Complete the first task" -> {"action": "complete_todo", "todoNumber": 1}
+"I bought the groceries" -> {"action": "complete_todo", "todoNumber": 3} (if todo 3 is "buy groceries")
+"Already returned the Amazon package" -> {"action": "complete_todo", "todoNumber": 4} (if todo 4 is "return an Amazon package")
+"Finished going to the dentist" -> {"action": "complete_todo", "todoNumber": 2} (if todo 2 is "go to the dentist")
+"I've completed the FSA enrollment" -> {"action": "complete_todo", "todoNumber": 1} (if todo 1 is "Enroll in FSA")
+"Done with the PECO bill" -> {"action": "complete_todo", "todoNumber": 3} (if todo 3 is "pay the PECO bill")
+
 Other examples:
 "Show me my work todos" -> {"action": "list_todos", "filter": {"category": "work"}}
-"Complete the first task" -> {"action": "complete_todo", "todoNumber": 1}
 "Create shopping list" -> {"action": "create_list", "name": "shopping"}
 "Switch to work list" -> {"action": "switch_list", "name": "work"}`;
 

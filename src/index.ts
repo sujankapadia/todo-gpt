@@ -1285,6 +1285,13 @@ function startInteractiveMode() {
         };
         
         const parsed = await openAIService.parseNaturalLanguage(trimmedInput, context);
+        
+        // DEBUG: Show request type detection and raw response
+        console.log('🔍 DEBUG INFO:');
+        console.log(`   Request Type Detected: ${parsed.action || 'unknown'}`);
+        console.log(`   Raw LLM Response: ${JSON.stringify(parsed, null, 2)}`);
+        console.log('');
+        
         await handleParsedCommand(parsed);
         
       } catch (error) {
