@@ -210,20 +210,23 @@ Current Context:
 Current Todos in "${context.currentList?.name || 'No List'}":
 ${this.formatTodosForContext(context)}${historyContext}
 
-SIMPLE DECISION RULE: Does the user's message indicate ANY change to todo status or data?
+DECISION RULE: Does the user's message request a specific action or structured command?
 
-**YES → Return JSON command to execute the change**
+**YES → Return JSON command to execute**
 This includes:
-- Explicit commands: "complete task 1", "mark as high priority", "add new task"
-- Implicit statements: "I bought X", "finished Y", "already did Z", "got the groceries"
-- Reference-based: "mark those done", "complete what we discussed"
-- Status updates: "I've done the report", "actually completed that yesterday"
+- **Data changes**: "complete task 1", "mark as high priority", "add new task"
+- **Implicit actions**: "I bought X", "finished Y", "already did Z", "got the groceries"
+- **Reference-based**: "mark those done", "complete what we discussed"
+- **Status updates**: "I've done the report", "actually completed that yesterday"
+- **List/display requests**: "show current list", "list todos", "show items", "display tasks"
+- **Filtering requests**: "show high priority", "list completed items", "show work todos"
 
 **NO → Return conversational response**
 This includes:
-- Information requests: "which todos mention X?", "what's due today?"
-- Analysis questions: "how many tasks left?", "show me completed items"
-- Strategy questions: "what should I focus on?", "how to organize?"
+- **Analysis questions**: "how many tasks left?", "what percentage complete?"
+- **Strategy questions**: "what should I focus on?", "how to organize?", "what's most urgent?"
+- **Search questions**: "which todos mention X?", "what's due today?"
+- **General help**: "how does this work?", "what can you do?"
 
 Available JSON Actions:
 - "add_todo": Add a single todo
@@ -288,6 +291,14 @@ Command Types:
 - "Mark FSA as not done" → {"action": "uncomplete_todo", "todoNumber": 1}
 - "I need to redo the dentist appointment" → {"action": "uncomplete_todo", "todoNumber": 2}
 - "Uncomplete the grocery task" → {"action": "uncomplete_todo", "todoNumber": 3}
+
+**List/Display Examples (use list_todos command):**
+- "Show current list" → {"action": "list_todos"}
+- "Show the items in this list" → {"action": "list_todos"}
+- "List todos" → {"action": "list_todos"}
+- "Display my tasks" → {"action": "list_todos"}
+- "Show high priority items" → {"action": "list_todos", "filter": {"priority": "high"}}
+- "List completed tasks" → {"action": "list_todos", "filter": {"status": "completed"}}
 
 **Complex Operations:**
 - "Mark those as high priority" → {"action": "command_sequence", "commands": [...]}
