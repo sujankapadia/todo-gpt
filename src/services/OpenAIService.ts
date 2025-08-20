@@ -30,21 +30,14 @@ export class OpenAIService {
 
     const systemPrompt = `You are a helpful assistant that parses natural language todo requests into structured JSON.
 
-Current context:
-- Current list: ${context.currentList?.name || 'None'}
-- Available lists: ${context.availableLists?.map((l: any) => l.name).join(', ') || 'None'}
-- Today's date: ${new Date().toISOString().split('T')[0]}
+INSTRUCTIONS:
+Parse the user's input and determine what action they want to take. Respond with valid JSON only.
 
-Current Todos in "${context.currentList?.name || 'No List'}":
-${this.formatTodosForContext(context)}
-
-IMPORTANT: For completion requests, look at the current todos above and match the user's statement to the specific todo number. Consider:
+IMPORTANT: For completion requests, look at the current todos in the context section below and match the user's statement to the specific todo number. Consider:
 - Exact title matches: "I returned the Amazon package" matches "return an Amazon package" 
 - Partial matches: "went to dentist" matches "go to the dentist"
 - Past tense variations: "bought groceries" matches "buy groceries"
 - Action completion: "finished the report" matches "finish the report"
-
-Parse the user's input and determine what action they want to take. Respond with valid JSON only.
 
 Available actions:
 - "add_todo": Add a single todo item
@@ -130,7 +123,15 @@ Uncomplete examples (match to specific todo numbers):
 Other examples:
 "Show me my work todos" -> {"action": "list_todos", "filter": {"category": "work"}}
 "Create shopping list" -> {"action": "create_list", "name": "shopping"}
-"Switch to work list" -> {"action": "switch_list", "name": "work"}`;
+"Switch to work list" -> {"action": "switch_list", "name": "work"}
+
+CURRENT CONTEXT:
+- Current list: ${context.currentList?.name || 'None'}
+- Available lists: ${context.availableLists?.map((l: any) => l.name).join(', ') || 'None'}
+- Today's date: ${new Date().toISOString().split('T')[0]}
+
+Current Todos in "${context.currentList?.name || 'No List'}":
+${this.formatTodosForContext(context)}`;
 
     try {
       const response = await this.client.chat.completions.create({
@@ -140,7 +141,9 @@ Other examples:
           { role: 'user', content: input }
         ],
         max_tokens: 200,
-        temperature: 0.1 // Low temperature for consistent parsing
+        temperature: 0.1, // Low temperature for consistent parsing
+        response_format: {"type": "json_object"}, // Return JSON
+        prompt_cache_key: 'todo-parse-v1' // Enable better cache hit rates for shared prefix
       });
 
       const content = response.choices[0]?.message?.content;
@@ -201,14 +204,6 @@ Without an API key, you can still use slash commands like /add, /list, etc.`;
       : '';
 
     return `You are a helpful AI assistant for a todo list application. Help users manage tasks, provide insights, and suggest command sequences for complex operations.
-
-Current Context:
-- Current list: ${context.currentList?.name || 'None'}
-- Available lists: ${context.availableLists?.map((l: any) => `${l.name} (${l.todos.length} items)`).join(', ') || 'None'}
-- Today's date: ${new Date().toISOString().split('T')[0]}
-
-Current Todos in "${context.currentList?.name || 'No List'}":
-${this.formatTodosForContext(context)}${historyContext}
 
 DECISION RULE: Does the user's message request a specific action or structured command?
 
@@ -320,6 +315,14 @@ Command Types:
 - Only ask for clarification if the reference is genuinely ambiguous
 - "Change due date for those" after listing high priority todos → directly edit those high priority todos
 
+CURRENT CONTEXT:
+- Current list: ${context.currentList?.name || 'None'}
+- Available lists: ${context.availableLists?.map((l: any) => `${l.name} (${l.todos.length} items)`).join(', ') || 'None'}
+- Today's date: ${new Date().toISOString().split('T')[0]}
+
+Current Todos in "${context.currentList?.name || 'No List'}":
+${this.formatTodosForContext(context)}${historyContext}
+
 Use both todo data and conversation history for accurate responses.`;
   }
 
@@ -338,7 +341,8 @@ Use both todo data and conversation history for accurate responses.`;
           { role: 'user', content: message }
         ],
         max_tokens: 600,
-        temperature: 0.3
+        temperature: 0.3,
+        prompt_cache_key: 'todo-chat-v1' // Enable better cache hit rates for shared prefix
       });
 
       const content = response.choices[0]?.message?.content;
