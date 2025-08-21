@@ -1,4 +1,6 @@
 import OpenAI from 'openai';
+import { zodResponseFormat } from 'openai/helpers/zod';
+import { TodoCommand, type TodoCommandType } from '../schemas/todoCommandsSimple';
 
 export class OpenAIService {
   private client: OpenAI | null = null;
@@ -133,22 +135,23 @@ Other examples:
 "Switch to work list" -> {"action": "switch_list", "name": "work"}`;
 
     try {
-      const response = await this.client.chat.completions.create({
-        model: 'gpt-4.1',
+      const response = await this.client.chat.completions.parse({
+        model: 'gpt-4o-2024-08-06', // Structured outputs require gpt-4o
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: input }
         ],
+        response_format: zodResponseFormat(TodoCommand, "todo_command"),
         max_tokens: 200,
-        temperature: 0.1 // Low temperature for consistent parsing
+        temperature: 0.1
       });
 
-      const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('No response from OpenAI');
+      const parsed = response.choices[0]?.message?.parsed;
+      if (!parsed) {
+        throw new Error('Failed to parse response or request was refused');
       }
 
-      return JSON.parse(content);
+      return parsed as TodoCommandType;
     } catch (error) {
       console.error('OpenAI parsing error:', error);
       // Fallback to unknown action
@@ -331,34 +334,55 @@ Use both todo data and conversation history for accurate responses.`;
     const systemPrompt = this.getChatSystemPrompt(context, conversationHistory);
 
     try {
-      const response = await this.client.chat.completions.create({
-        model: 'gpt-4.1',
+      // First try with structured output
+      const response = await this.client.chat.completions.parse({
+        model: 'gpt-4o-2024-08-06',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
         ],
+        response_format: zodResponseFormat(TodoCommand, "todo_command"),
         max_tokens: 600,
         temperature: 0.3
       });
 
-      const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('No response from OpenAI');
+      const parsed = response.choices[0]?.message?.parsed;
+      if (parsed) {
+        return parsed as TodoCommandType;
       }
-
-      // Try to parse as JSON first, if it fails return as conversational text
-      try {
-        return JSON.parse(content);
-      } catch {
-        // Return as conversational response
+      
+      // If parsing was refused, fall back to conversational
+      const content = response.choices[0]?.message?.content;
+      if (content) {
         return {
           action: 'conversational',
           message: content
         };
       }
+
+      throw new Error('No response from OpenAI');
     } catch (error) {
-      console.error('OpenAI chat error:', error);
-      throw new Error(`AI chat failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // If structured parsing fails, try conversational fallback
+      try {
+        const response = await this.client.chat.completions.create({
+          model: 'gpt-4o-2024-08-06',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message }
+          ],
+          max_tokens: 600,
+          temperature: 0.3
+        });
+
+        const content = response.choices[0]?.message?.content;
+        return {
+          action: 'conversational', 
+          message: content || 'Sorry, I couldn\'t understand that request.'
+        };
+      } catch (fallbackError) {
+        console.error('OpenAI chat error:', fallbackError);
+        throw new Error(`Chat failed: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
+      }
     }
   }
 
