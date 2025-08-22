@@ -202,9 +202,6 @@ function startInteractiveMode() {
       case 'add_todo':
         handleAddTodo(parsed);
         break;
-      case 'add_multiple_todos':
-        handleAddMultipleTodos(parsed);
-        break;
       case 'list_todos':
         handleListTodos(parsed);
         break;
@@ -292,85 +289,6 @@ function startInteractiveMode() {
     }
   }
 
-  function handleAddMultipleTodos(parsed: any): void {
-    const currentList = listService.getCurrentList();
-    if (!currentList) {
-      console.log('❌ No current list selected. Use /create to create a list first.\n');
-      return;
-    }
-
-    if (!parsed.todos || !Array.isArray(parsed.todos) || parsed.todos.length === 0) {
-      console.log('❌ No todos found in your request.\n');
-      return;
-    }
-
-    try {
-      let successCount = 0;
-      let failureCount = 0;
-      const addedTodos: string[] = [];
-
-      for (const todoData of parsed.todos) {
-        if (!todoData.title) {
-          failureCount++;
-          continue;
-        }
-
-        try {
-          const options: any = {};
-          if (todoData.priority && ['high', 'medium', 'low'].includes(todoData.priority)) {
-            options.priority = todoData.priority;
-          }
-          if (todoData.dueDate) {
-            // Parse date in local timezone to avoid UTC conversion issues
-            const dateParts = todoData.dueDate.split('-');
-            const year = parseInt(dateParts[0]);
-            const month = parseInt(dateParts[1]) - 1; // Month is 0-indexed
-            const day = parseInt(dateParts[2]);
-            const dueDate = new Date(year, month, day);
-            if (!isNaN(dueDate.getTime())) {
-              options.dueDate = dueDate;
-            }
-          }
-          if (todoData.categories && Array.isArray(todoData.categories)) {
-            options.categories = todoData.categories;
-          }
-          if (todoData.description) {
-            options.description = todoData.description;
-          }
-
-          const newTodo = todoService.createTodo(todoData.title, options);
-          listService.addTodoToCurrentList(newTodo);
-          
-          let todoDescription = `"${newTodo.title}"`;
-          if (options.priority) todoDescription += ` (${options.priority})`;
-          if (options.dueDate) todoDescription += ` (due: ${options.dueDate.toLocaleDateString()})`;
-          if (options.categories) todoDescription += ` [${options.categories.join(', ')}]`;
-          
-          addedTodos.push(todoDescription);
-          successCount++;
-        } catch (error) {
-          console.log(`❌ Failed to add "${todoData.title}": ${error}`);
-          failureCount++;
-        }
-      }
-
-      // Display results
-      if (successCount > 0) {
-        console.log(`✅ Added ${successCount} todo${successCount > 1 ? 's' : ''} to ${currentList.name} list:`);
-        addedTodos.forEach((todo, index) => {
-          console.log(`  ${index + 1}. ${todo}`);
-        });
-      }
-      
-      if (failureCount > 0) {
-        console.log(`❌ Failed to add ${failureCount} todo${failureCount > 1 ? 's' : ''}`);
-      }
-      
-      console.log();
-    } catch (error) {
-      console.log(`❌ Failed to process multiple todos: ${error}\n`);
-    }
-  }
 
   function handleListTodos(parsed: any): void {
     const currentList = listService.getCurrentList();

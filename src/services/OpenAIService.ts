@@ -48,7 +48,6 @@ Parse the user's input and determine what action they want to take. Respond with
 
 Available actions:
 - "add_todo": Add a single todo item
-- "add_multiple_todos": Add multiple todo items from a paragraph or list
 - "list_todos": Show todos (can be filtered)
 - "complete_todo": Mark a todo as completed  
 - "uncomplete_todo": Mark a todo as not completed
@@ -68,19 +67,6 @@ JSON Schema for add_todo:
   "categories": ["array of strings (optional)"]
 }
 
-JSON Schema for add_multiple_todos:
-{
-  "action": "add_multiple_todos",
-  "todos": [
-    {
-      "title": "string (required)",
-      "description": "string (optional)",
-      "priority": "high|medium|low (optional)",
-      "dueDate": "YYYY-MM-DD format (optional)",
-      "categories": ["array of strings (optional)"]
-    }
-  ]
-}
 
 Date parsing guidelines:
 - "today" -> use today's date
@@ -97,11 +83,6 @@ Examples:
 "Add call doctor next Monday" -> {"action": "add_todo", "title": "call doctor", "dueDate": "2024-XX-XX"}
 "Add finish project with high priority due Friday" -> {"action": "add_todo", "title": "finish project", "priority": "high", "dueDate": "2024-XX-XX"}
 
-Multiple todos examples:
-"I need to buy groceries, call the dentist, and finish the report by Friday" -> {"action": "add_multiple_todos", "todos": [{"title": "buy groceries"}, {"title": "call the dentist"}, {"title": "finish the report", "dueDate": "2025-XX-XX"}]}
-"Add these tasks: 1) review code 2) update documentation 3) send email to team" -> {"action": "add_multiple_todos", "todos": [{"title": "review code"}, {"title": "update documentation"}, {"title": "send email to team"}]}
-"Tomorrow I need to pick up dry cleaning, go to the bank, and schedule a haircut" -> {"action": "add_multiple_todos", "todos": [{"title": "pick up dry cleaning", "dueDate": "${new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0]}"}, {"title": "go to the bank", "dueDate": "${new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0]}"}, {"title": "schedule a haircut", "dueDate": "${new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0]}"}]}
-"High priority tasks: fix the bug in login system and deploy to production" -> {"action": "add_multiple_todos", "todos": [{"title": "fix the bug in login system", "priority": "high"}, {"title": "deploy to production", "priority": "high"}]}
 
 Completion examples (match to specific todo numbers from current list):
 "Complete the first task" -> {"action": "complete_todo", "todoNumber": 1}
@@ -230,7 +211,6 @@ This includes:
 
 Available JSON Actions:
 - "add_todo": Add a single todo
-- "add_multiple_todos": Add multiple todos
 - "complete_todo": Mark todo completed  
 - "uncomplete_todo": Mark todo as not completed
 - "create_list": Create new list
@@ -378,7 +358,6 @@ Parse the user's input and determine what action they want to take. Respond with
 
 Available actions:
 - "add_todo": Add a single todo item
-- "add_multiple_todos": Add multiple todo items from a paragraph or list
 - "list_todos": Show todos (can be filtered)
 - "complete_todo": Mark a todo as completed  
 - "edit_todo": Modify an existing todo
@@ -396,19 +375,6 @@ JSON Schema for add_todo:
   "categories": ["array of strings (optional)"]
 }
 
-JSON Schema for add_multiple_todos:
-{
-  "action": "add_multiple_todos",
-  "todos": [
-    {
-      "title": "string (required)",
-      "description": "string (optional)",
-      "priority": "high|medium|low (optional)",
-      "dueDate": "YYYY-MM-DD format (optional)",
-      "categories": ["array of strings (optional)"]
-    }
-  ]
-}
 
 Date parsing guidelines:
 - "today" -> use today's date
@@ -425,11 +391,6 @@ Examples:
 "Add call doctor next Monday" -> {"action": "add_todo", "title": "call doctor", "dueDate": "2024-XX-XX"}
 "Add finish project with high priority due Friday" -> {"action": "add_todo", "title": "finish project", "priority": "high", "dueDate": "2024-XX-XX"}
 
-Multiple todos examples:
-"I need to buy groceries, call the dentist, and finish the report by Friday" -> {"action": "add_multiple_todos", "todos": [{"title": "buy groceries"}, {"title": "call the dentist"}, {"title": "finish the report", "dueDate": "2025-XX-XX"}]}
-"Add these tasks: 1) review code 2) update documentation 3) send email to team" -> {"action": "add_multiple_todos", "todos": [{"title": "review code"}, {"title": "update documentation"}, {"title": "send email to team"}]}
-"Tomorrow I need to pick up dry cleaning, go to the bank, and schedule a haircut" -> {"action": "add_multiple_todos", "todos": [{"title": "pick up dry cleaning", "dueDate": "${new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0]}"}, {"title": "go to the bank", "dueDate": "${new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0]}"}, {"title": "schedule a haircut", "dueDate": "${new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0]}"}]}
-"High priority tasks: fix the bug in login system and deploy to production" -> {"action": "add_multiple_todos", "todos": [{"title": "fix the bug in login system", "priority": "high"}, {"title": "deploy to production", "priority": "high"}]}
 
 Other examples:
 "Show me my work todos" -> {"action": "list_todos", "filter": {"category": "work"}}
