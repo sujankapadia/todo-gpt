@@ -426,17 +426,21 @@ function startInteractiveMode() {
       return;
     }
 
-    const todoIndex = (parsed.todoNumber || parsed.index) - 1;
-    if (isNaN(todoIndex) || todoIndex < 0 || todoIndex >= currentList.todos.length) {
-      console.log('❌ Invalid todo number. Use /list to see available todos.\n');
+    const resolution = todoService.resolveTodoReference(currentList.todos, {
+      shortId: parsed.shortId,
+      todoNumber: parsed.todoNumber || parsed.index,
+      confirmTitle: parsed.confirmTitle
+    });
+
+    if (!resolution.todo) {
+      console.log(`❌ ${resolution.error}\n`);
       return;
     }
 
     try {
-      const todo = currentList.todos[todoIndex];
-      todoService.completeTodo(currentList.todos, todo.id);
-      listService.updateTodoInCurrentList(todo);
-      console.log(`✅ Completed "${todo.title}"\n`);
+      todoService.completeTodo(currentList.todos, resolution.todo.id);
+      listService.updateTodoInCurrentList(resolution.todo);
+      console.log(`✅ Completed "${resolution.todo.title}"\n`);
     } catch (error) {
       console.log(`❌ Failed to complete todo: ${error}\n`);
     }
@@ -449,17 +453,21 @@ function startInteractiveMode() {
       return;
     }
 
-    const todoIndex = (parsed.todoNumber || parsed.index) - 1;
-    if (isNaN(todoIndex) || todoIndex < 0 || todoIndex >= currentList.todos.length) {
-      console.log('❌ Invalid todo number. Use /list to see available todos.\n');
+    const resolution = todoService.resolveTodoReference(currentList.todos, {
+      shortId: parsed.shortId,
+      todoNumber: parsed.todoNumber || parsed.index,
+      confirmTitle: parsed.confirmTitle
+    });
+
+    if (!resolution.todo) {
+      console.log(`❌ ${resolution.error}\n`);
       return;
     }
 
     try {
-      const todo = currentList.todos[todoIndex];
-      todoService.uncompleteTodo(currentList.todos, todo.id);
-      listService.updateTodoInCurrentList(todo);
-      console.log(`✅ Marked "${todo.title}" as not completed\n`);
+      todoService.uncompleteTodo(currentList.todos, resolution.todo.id);
+      listService.updateTodoInCurrentList(resolution.todo);
+      console.log(`✅ Marked "${resolution.todo.title}" as not completed\n`);
     } catch (error) {
       console.log(`❌ Failed to uncomplete todo: ${error}\n`);
     }
@@ -472,14 +480,19 @@ function startInteractiveMode() {
       return;
     }
 
-    const todoIndex = (parsed.todoNumber || parsed.index) - 1;
-    if (isNaN(todoIndex) || todoIndex < 0 || todoIndex >= currentList.todos.length) {
-      console.log('❌ Invalid todo number. Use /list to see available todos.\n');
+    const resolution = todoService.resolveTodoReference(currentList.todos, {
+      shortId: parsed.shortId,
+      todoNumber: parsed.todoNumber || parsed.index,
+      confirmTitle: parsed.confirmTitle
+    });
+
+    if (!resolution.todo) {
+      console.log(`❌ ${resolution.error}\n`);
       return;
     }
 
     try {
-      const todo = currentList.todos[todoIndex];
+      const todo = resolution.todo;
       const updates: any = {};
       let hasUpdates = false;
 
@@ -577,16 +590,20 @@ function startInteractiveMode() {
       return;
     }
 
-    const todoIndex = (parsed.todoNumber || parsed.index) - 1;
-    if (isNaN(todoIndex) || todoIndex < 0 || todoIndex >= currentList.todos.length) {
-      console.log('❌ Invalid todo number. Use /list to see available todos.\n');
+    const resolution = todoService.resolveTodoReference(currentList.todos, {
+      shortId: parsed.shortId,
+      todoNumber: parsed.todoNumber || parsed.index,
+      confirmTitle: parsed.confirmTitle
+    });
+
+    if (!resolution.todo) {
+      console.log(`❌ ${resolution.error}\n`);
       return;
     }
 
     try {
-      const todo = currentList.todos[todoIndex];
-      listService.deleteTodoFromCurrentList(todo.id);
-      console.log(`✅ Deleted "${todo.title}"\n`);
+      listService.deleteTodoFromCurrentList(resolution.todo.id);
+      console.log(`✅ Deleted "${resolution.todo.title}"\n`);
     } catch (error) {
       console.log(`❌ Failed to delete todo: ${error}\n`);
     }
@@ -679,11 +696,11 @@ function startInteractiveMode() {
         if (cmd.categories && cmd.categories.length > 0) addCmd += ` --category "${cmd.categories.join(',')}"`;
         return addCmd;
       case 'delete_todo':
-        return `/delete ${cmd.todoNumber}`;
+        return `/delete ${cmd.shortId || cmd.todoNumber}`;
       case 'complete_todo':
-        return `/complete ${cmd.todoNumber}`;
+        return `/complete ${cmd.shortId || cmd.todoNumber}`;
       case 'edit_todo':
-        let editCmd = `/edit ${cmd.todoNumber}`;
+        let editCmd = `/edit ${cmd.shortId || cmd.todoNumber}`;
         if (cmd.title) editCmd += ` --title "${cmd.title}"`;
         if (cmd.priority) editCmd += ` --priority ${cmd.priority}`;
         if (cmd.dueDate) editCmd += ` --due ${cmd.dueDate}`;

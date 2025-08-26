@@ -48,6 +48,50 @@ export class TodoService {
     ) || null;
   }
 
+  findTodoByShortId(todos: TodoItem[], shortId: string): TodoItem | null {
+    if (!shortId || shortId.length < 8) return null;
+    return todos.find(todo => todo.id.startsWith(shortId.toLowerCase())) || null;
+  }
+
+  resolveTodoReference(todos: TodoItem[], reference: {
+    shortId?: string;
+    todoNumber?: number;
+    confirmTitle?: string;
+  }): { todo: TodoItem | null; error?: string } {
+    let todo: TodoItem | null = null;
+
+    // Try shortId first (preferred method)
+    if (reference.shortId) {
+      todo = this.findTodoByShortId(todos, reference.shortId);
+      if (!todo) {
+        return { todo: null, error: `No todo found with shortId: ${reference.shortId}` };
+      }
+    }
+    // Fall back to position-based (legacy support)
+    else if (reference.todoNumber !== undefined) {
+      const todoIndex = reference.todoNumber - 1;
+      if (todoIndex < 0 || todoIndex >= todos.length) {
+        return { todo: null, error: `Invalid todo number: ${reference.todoNumber}` };
+      }
+      todo = todos[todoIndex];
+    }
+    else {
+      return { todo: null, error: 'No todo identifier provided (shortId or todoNumber required)' };
+    }
+
+    // Verify with confirmTitle if provided (safety check)
+    if (reference.confirmTitle && todo) {
+      if (!todo.title.toLowerCase().includes(reference.confirmTitle.toLowerCase())) {
+        return { 
+          todo: null, 
+          error: `Title mismatch: expected "${reference.confirmTitle}", found "${todo.title}"` 
+        };
+      }
+    }
+
+    return { todo };
+  }
+
   completeTodo(todos: TodoItem[], todoId: string): boolean {
     const todo = this.findTodoById(todos, todoId);
     if (todo) {
